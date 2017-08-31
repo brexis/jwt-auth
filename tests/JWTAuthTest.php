@@ -165,6 +165,7 @@ class JWTAuthTest extends AbstractTestCase
     {
         $payload = Mockery::mock(Payload::class);
         $payload->shouldReceive('get')->once()->with('sub')->andReturn(1);
+        $payload->shouldReceive('hasKey')->once()->with('host.id')->andReturn(false);
 
         $this->manager->shouldReceive('decode')->once()->andReturn($payload);
 
@@ -177,10 +178,29 @@ class JWTAuthTest extends AbstractTestCase
     }
 
     /** @test */
+    public function it_should_return_the_host_user_from_a_token_containing_an_existing_user()
+    {
+        $payload = Mockery::mock(Payload::class);
+        $payload->shouldReceive('get')->once()->with('sub')->andReturn(1);
+        $payload->shouldReceive('hasKey')->once()->with('host.id')->andReturn(true);
+        $payload->shouldReceive('get')->once()->with('host.id')->andReturn(2);
+
+        $this->manager->shouldReceive('decode')->once()->andReturn($payload);
+
+        $this->auth->shouldReceive('byId')->once()->with(2)->andReturn(true);
+        $this->auth->shouldReceive('user')->once()->andReturn((object) ['id' => 2]);
+
+        $user = $this->jwtAuth->setToken('foo.bar.baz')->customClaims(['foo' => 'bar'])->authenticate();
+
+        $this->assertSame($user->id, 2);
+    }
+
+    /** @test */
     public function it_should_return_false_when_passing_a_token_not_containing_an_existing_user()
     {
         $payload = Mockery::mock(Payload::class);
         $payload->shouldReceive('get')->once()->with('sub')->andReturn(1);
+        $payload->shouldReceive('hasKey')->once()->with('host.id')->andReturn(false);
 
         $this->manager->shouldReceive('decode')->once()->andReturn($payload);
 

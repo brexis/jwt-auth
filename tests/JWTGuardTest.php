@@ -63,6 +63,7 @@ class JWTGuardTest extends AbstractTestCase
     {
         $payload = Mockery::mock(Payload::class);
         $payload->shouldReceive('offsetGet')->once()->with('sub')->andReturn(1);
+        $payload->shouldReceive('hasKey')->once()->with('host.id')->andReturn(false);
 
         $this->jwt->shouldReceive('setRequest')->andReturn($this->jwt);
         $this->jwt->shouldReceive('getToken')->once()->andReturn('foo.bar.baz');
@@ -98,6 +99,7 @@ class JWTGuardTest extends AbstractTestCase
     {
         $payload = Mockery::mock(Payload::class);
         $payload->shouldReceive('offsetGet')->once()->with('sub')->andReturn(1);
+        $payload->shouldReceive('hasKey')->once()->with('host.id')->andReturn(false);
 
         $this->jwt->shouldReceive('setRequest')->andReturn($this->jwt);
         $this->jwt->shouldReceive('getToken')->once()->andReturn('foo.bar.baz');
@@ -119,6 +121,40 @@ class JWTGuardTest extends AbstractTestCase
 
         // check that the user is stored on the object next time round
         $this->assertSame(1, $this->guard->userOrFail()->id);
+        $this->assertTrue($this->guard->check());
+    }
+
+    /**
+     * @test
+     * @group laravel-5.2
+     */
+    public function it_should_get_the_host_user_if_a_valid_token_is_provided_and_not_throw_an_exception()
+    {
+        $payload = Mockery::mock(Payload::class);
+        $payload->shouldReceive('offsetGet')->once()->with('sub')->andReturn(1);
+        $payload->shouldReceive('hasKey')->once()->with('host.id')->andReturn(true);
+        $payload->shouldReceive('get')->once()->with('host.id')->andReturn(2);
+
+        $this->jwt->shouldReceive('setRequest')->andReturn($this->jwt);
+        $this->jwt->shouldReceive('getToken')->once()->andReturn('foo.bar.baz');
+        $this->jwt->shouldReceive('check')->once()->with(true)->andReturn($payload);
+        $this->jwt->shouldReceive('checkProvider')
+                  ->once()
+                  ->with('\Tymon\JWTAuth\Test\Stubs\LaravelUserStub')
+                  ->andReturn(true);
+
+        $this->provider->shouldReceive('getModel')
+                       ->once()
+                       ->andReturn('\Tymon\JWTAuth\Test\Stubs\LaravelUserStub');
+        $this->provider->shouldReceive('retrieveById')
+             ->once()
+             ->with(2)
+             ->andReturn((object) ['id' => 2]);
+
+        $this->assertSame(2, $this->guard->userOrFail()->id);
+
+        // check that the user is stored on the object next time round
+        $this->assertSame(2, $this->guard->userOrFail()->id);
         $this->assertTrue($this->guard->check());
     }
 

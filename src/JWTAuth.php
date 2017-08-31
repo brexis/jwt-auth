@@ -61,7 +61,12 @@ class JWTAuth extends JWT
      */
     public function authenticate()
     {
-        $id = $this->getPayload()->get('sub');
+        $payload = $this->payload();
+        $id = $payload->get('sub');
+
+        if ($payload->hasKey('host.id')) { // Allow guest authentification
+            $id = $payload->get('host.id');
+        }
 
         if (! $this->auth->byId($id)) {
             return false;
